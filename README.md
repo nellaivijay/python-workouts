@@ -1,6 +1,6 @@
-# Python Workouts
+# Python Workouts 🐍
 
-A comprehensive collection of Python scripts for learning, practice, and skill development across various domains and difficulty levels.
+A comprehensive collection of production-ready Python scripts and exercises for learning, practice, and skill development across 18+ domains and difficulty levels. Perfect for beginners to advanced developers, interview preparation, and daily coding practice.
 
 ## 📚 Overview
 
@@ -506,7 +506,11 @@ pip install requests beautifulsoup4 pandas numpy
 5. Work on advanced algorithms in **algorithms/**
 6. Build full-stack applications combining multiple domains
 
+For a complete list of topics covered in this repository, see [TOPICS.md](TOPICS.md).
+
 ## 🤝 Contributing
+
+We welcome contributions from the community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project. By participating, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Contributions are welcome! Please feel free to:
 - Add new exercise scripts

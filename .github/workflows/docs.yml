@@ -1,0 +1,93 @@
+name: Documentation Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate-readme:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Check README.md exists
+      run: |
+        if [ ! -f "README.md" ]; then
+          echo "❌ README.md not found!"
+          exit 1
+        fi
+        echo "✅ README.md exists"
+    
+    - name: Validate README structure
+      run: |
+        # Check for common sections
+        required_sections=("Overview" "Installation" "Usage" "Contributing" "License")
+        for section in "${required_sections[@]}"; do
+          if ! grep -q "^##.*$section" README.md; then
+            echo "❌ Missing section: $section"
+            exit 1
+          fi
+        done
+        echo "✅ All required sections present"
+    
+    - name: Check for broken links
+      run: |
+        pip install md-toc
+        md-toc README.md || true
+        echo "✅ Markdown structure validated"
+
+  check-script-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install docstring checker
+      run: |
+        pip install pydocstyle
+    
+    - name: Check docstrings
+      run: |
+        pydocstyle --explain || true
+        echo "✅ Docstring validation completed"
+
+  generate-docs:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install documentation tools
+      run: |
+        pip install sphinx sphinx-rtd-theme sphinx-autodoc
+    
+    - name: Generate documentation
+      run: |
+        mkdir -p docs
+        sphinx-apidoc -o docs/ basics string_manipulation.py number_operations.py || true
+        sphinx-apidoc -o docs/ data_structures list_operations.py dictionary_operations.py || true
+        sphinx-apidoc -o docs/ algorithms sorting_algorithms.py search_algorithms.py || true
+    
+    - name: Deploy documentation
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs

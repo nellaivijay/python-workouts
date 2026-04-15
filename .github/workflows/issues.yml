@@ -1,0 +1,59 @@
+name: Issue Automation
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label-issues:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Label new issues
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.addLabels({
+            issue_number: context.issue.number,
+            labels: ['enhancement', 'triage needed']
+          })
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Add issue to project board
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.projects.createCard({
+            column_id: 'PROJ_COLUMN_ID',  # Replace with actual column ID
+            content_id: context.issue.id,
+            content_type: 'Issue'
+          })
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  issue-response:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Check for issue template
+      uses: actions/github-script@v6
+      with:
+        script: |
+          issue_body = context.issue.body
+          if not issue_body or len(issue_body) < 20:
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              body: '⚠️ Please use the issue template and provide more details about your request.'
+            })
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              state: 'closed'
+            })
+        github-token: ${{ secrets.GITHUB_TOKEN }}

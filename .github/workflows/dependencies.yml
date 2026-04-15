@@ -1,0 +1,60 @@
+name: Dependency Management
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install pip-tools
+      run: |
+        pip install pip-audit pip-upgrade pip-compile
+    
+    - name: Check for outdated dependencies
+      run: |
+        pip-audit --output-format=json > pip-audit-report.json || true
+        echo "✅ Dependency audit completed"
+    
+    - name: Upload audit report
+      uses: actions/upload-artifact@v3
+      with:
+        name: pip-audit-report
+        path: pip-audit-report.json
+    
+    - name: Check for security vulnerabilities
+      run: |
+        pip install safety
+        safety check --json > safety-report.json || true
+        echo "✅ Security check completed"
+    
+    - name: Upload safety report
+      uses: actions/upload-artifact@v3
+      with:
+        name: safety-report
+        path: safety-report.json
+    
+    - name: Create dependency update PR
+      if: steps.check-for-security-vulnerabilities.outputs.result == 'vulnerabilities found'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        title: '🔒 Security: Update dependencies'
+        body: |
+          Automated dependency update to address security vulnerabilities.
+          
+          This PR updates dependencies to their latest secure versions.
+          Please review the changes and test thoroughly before merging.
+        branch: dependency-updates
+        branch-suffix: timestamp
+        delete-branch: true

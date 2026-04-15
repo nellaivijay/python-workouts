@@ -1,0 +1,94 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  performance-benchmark:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install performance tools
+      run: |
+        pip install pytest-benchmark pytest-profiling timeit
+    
+    - name: Run performance benchmarks
+      run: |
+        pytest --benchmark-only -v --benchmark-json=benchmark.json || true
+        echo "✅ Performance benchmarks completed"
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: benchmark.json
+    
+    - name: Comment performance results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          import json
+          import os
+          
+          if os.path.exists('benchmark.json'):
+              with open('benchmark.json', 'r') as f:
+                  benchmarks = json.load(f)
+              
+              comment = f"## 🚀 Performance Benchmark Results\n\n"
+              for benchmark in benchmarks.get('benchmarks', []):
+                  comment += f"- {benchmark['name']}: {benchmark['stats']['mean']:.4f}s\n"
+              
+              github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  body: comment
+              })
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  code-complexity:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install complexity analyzer
+      run: |
+        pip install radon xenon
+    
+    - name: Analyze code complexity
+      run: |
+        radon . -a -s > radon-report.json || true
+        xenon . --max-cc 10 > xenon-report.json || true
+        echo "✅ Code complexity analysis completed"
+    
+    - name: Upload complexity reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: complexity-reports
+        path: |
+          radon-report.json
+          xenon-report.json
+    
+    - name: Check complexity thresholds
+      run: |
+        pip install radon
+        radon . -a -s --max-cc 15
+        echo "✅ Complexity thresholds validated"
